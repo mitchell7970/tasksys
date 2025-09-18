@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tasksys-postgres
+    environment:
+      POSTGRES_DB: tasksys
+      POSTGRES_USER: tasksys_user
+      POSTGRES_PASSWORD: tasksys_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tasksys-network
+
+  app:
+    build: .
+    container_name: tasksys-app
+    depends_on:
+      - postgres
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tasksys
+      SPRING_DATASOURCE_USERNAME: tasksys_user
+      SPRING_DATASOURCE_PASSWORD: tasksys_pass
+    ports:
+      - "8080:8080"
+    networks:
+      - tasksys-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4
+    depends_on:
+      - postgres
+    environment:
+      PGADMIN_DEFAULT_EMAIL: pgadmin@tasksys.com
+      PGADMIN_DEFAULT_PASSWORD: tasksys_pass
+    ports:
+      - "5050:80"
+    networks:
+      - tasksys-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  tasksys-network:
+    driver: bridge
