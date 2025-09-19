@@ -3,9 +3,12 @@ package dev.tasksys.service;
 import dev.tasksys.model.TaskDto;
 import dev.tasksys.model.Task;
 import dev.tasksys.model.TaskStatus;
+import dev.tasksys.model.User;
 import dev.tasksys.exception.TaskNotFoundException;
 import dev.tasksys.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,26 +18,36 @@ import java.util.List;
 public class TaskService {
     private final TaskRepository taskRepository;
 
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (User) authentication.getPrincipal();
+    }
+
     public TaskDto createTask(TaskDto taskDto) {
+        User currentUser = getCurrentUser();
         Task task = convertToEntity(taskDto);
+        task.setUser(currentUser);
         Task savedTask = taskRepository.save(task);
         return convertToDto(savedTask);
     }
 
     public List<TaskDto> getAllTasks() {
-        return taskRepository.findAll().stream()
+        User currentUser = getCurrentUser();
+        return taskRepository.findByUserId(currentUser.getId()).stream()
                 .map(this::convertToDto)
                 .toList();
     }
 
     public TaskDto getTaskById(Long id) {
-        Task task = taskRepository.findById(id)
+        User currentUser = getCurrentUser();
+        Task task = taskRepository.findByIdAndUserId(id, currentUser.getId())
                 .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + id));
         return convertToDto(task);
     }
 
     public TaskDto updateTask(Long id, TaskDto taskDto) {
-        Task existingTask = taskRepository.findById(id)
+        User currentUser = getCurrentUser();
+        Task existingTask = taskRepository.findByIdAndUserId(id, currentUser.getId())
                 .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + id));
 
         existingTask.setTitle(taskDto.getTitle());
@@ -47,15 +60,16 @@ public class TaskService {
     }
 
     public void deleteTask(Long id) {
-        if (!taskRepository.existsById(id)) {
-            throw new TaskNotFoundException("Task not found with id: " + id);
-        }
-        taskRepository.deleteById(id);
+        User currentUser = getCurrentUser();
+        Task task = taskRepository.findByIdAndUserId(id, currentUser.getId())
+                .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + id));
+        taskRepository.delete(task);
     }
 
     public List<TaskDto> getTasksByStatus(String status) {
+        User currentUser = getCurrentUser();
         TaskStatus taskStatus = TaskStatus.valueOf(status);
-        return taskRepository.findByStatus(taskStatus).stream()
+        return taskRepository.findByUserIdAndStatus(currentUser.getId(), taskStatus).stream()
                 .map(this::convertToDto)
                 .toList();
     }
