@@ -3,16 +3,16 @@ package dev.tasksys.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "tasks")
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,10 +33,15 @@ public class Task {
     @Column(nullable = false)
     private TaskStatus status = TaskStatus.TO_DO;
 
-    public Task(String title, String description, LocalDate dueDate, TaskStatus status) {
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    public Task(String title, String description, LocalDate dueDate, TaskStatus status, User user) {
         this.title = title;
         this.description = description;
         this.dueDate = dueDate;
         this.status = status;
+        this.user = user;
     }
 }
